@@ -1,45 +1,48 @@
 {
-    "plugins": [
-        {
-            "file_path": "PluginStub",
-            "plugin_type": "comms",
-            "file_type": "shared_library",
-            "node_type": "any",
-            "shared_library_path": "PluginStub"
-        }
-    ],
-    "channel_properties":{
-        "stubCompositionFile": {
-            "channelGid": "stubCompositionFile",
-            "connectionType": "CT_INDIRECT",
-            "linkDirection": "LD_BIDI",
-            "transmissionType": "TT_MULTICAST"
-        },
-        "stubComposition": {
-            "channelGid": "stubComposition",
-            "connectionType": "CT_INDIRECT",
-            "linkDirection": "LD_BIDI",
-            "transmissionType": "TT_MULTICAST"
-        }        
-    },
-    "channel_parameters": [
-      {
-          "key": "env",
-          "required": false
+  "plugins": [
+    {
+      "file_path": "PluginStub",
+      "plugin_type": "comms",
+      "file_type": "shared_library",
+      "node_type": "any",
+      "shared_library_path": "libPluginStub.so",
+      "channels": [],
+      "transports": ["stub"],
+      "usermodels": [],
+      "encodings": []
+    }
+  ],
+  "channel_properties": {
+    "stubComposition": {
+      "channelGid": "stubComposition",
+      "bootstrap": false,
+      "connectionType": "CT_INDIRECT",
+      "linkDirection": "LD_CREATOR_TO_LOADER",
+      "transmissionType": "TT_MULTICAST",
+      "sendType": "ST_STORED_ASYNC",
+      "reliable": true,
+      "isFlushable": false,
+      "duration_s": -1,
+      "period_s": -1,
+      "mtu": -1,
+      "maxLinks": 10,
+      "supportedHints": [],
+      "creatorExpected": {
+        "send": {"bandwidth_bps": 1000000, "latency_ms": 10000, "loss": 0.0},
+        "receive": {"bandwidth_bps": 1000000, "latency_ms": 10000, "loss": 0.0}
+      },
+      "loaderExpected": {
+        "send": {"bandwidth_bps": 1000000, "latency_ms": 10000, "loss": 0.0},
+        "receive": {"bandwidth_bps": 1000000, "latency_ms": 10000, "loss": 0.0}
       }
-    ],
-    "compositions": [
-        {
-            "id": "stubComposition",
-            "transport": "stub",
-            "usermodel": "rapidUser",
-            "encodings": ["base64", "SRICLIEncoding"]
-        },
-        {
-            "id": "stubCompositionFile",
-            "transport": "stub",
-            "usermodel": "twoSixFileBasedUserModel",
-            "encodings": ["base64", "SRICLIEncoding"]
-        }
-    ]
+    }
+  },
+  "compositions": [
+    {
+      "id": "stubComposition",
+      "transport": "stub",
+      "usermodel": "twoSixFileBasedUserModel",
+      "encodings": ["noop"]
+    }
+  ]
 }

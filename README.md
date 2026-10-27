@@ -1,53 +1,71 @@
-# Transport Stub Plugin
+# Transport Stub (template)
 
-This is a template/stub for creating transport plugins that integrate with online services like Twitter, Discord, Reddit, etc.
-
-## Architecture Overview
+A complete, **building, tested** raceboat transport component for a generic "containers of ordered messages" service, plus the integration-test harness around it. It is the starting point for every new indirect transport: you replace the service-specific parts and keep everything else.
 
 ```
-PluginStub (main plugin interface)
-    ├── StubClient (service API client)
-    ├── Link (manages connections to service)
-    ├── LinkAddress (service-specific addressing)
-    └── MessageHashQueue (prevents duplicate messages)
+PluginStub            ITransportComponent: parameters, links, action declaration, content queueing
+ ├── Link             one service container + one worker thread (post / fetch, cursor persistence)
+ ├── LinkAddress      the JSON address exchanged between nodes
+ ├── LinkMap          thread-safe LinkID -> Link
+ └── ServiceClient    abstract service interface (the only place that talks to the service)
+      └── StubClient  reference HTTP implementation  <- replace with the real service
 ```
 
-## Quick Start for New Services
+What is verified here (all commands in `INTEGRATION_TEST_GUIDE.md`):
 
-1. **Configure Service Details** in `StubClient.cpp`:
-   - Update API endpoints
-   - Modify authentication method
-   - Implement service-specific message format
+| Check | Command |
+|---|---|
+| builds in the plugin-builder image | `./build_artifacts_in_docker_image.sh --image-tag <tag>` |
+| 30 unit tests (gtest, in-memory fake service) | `./run_unit_tests.sh --image-tag <tag>` |
+| 4 integration scenarios (send-only, send-recv, client-connect, mixed-client-connect) against `test/mock_service.py` — no credentials, no network | `./test/run_scenarios.py --image-tag <tag>` |
 
-2. **Update LinkAddress** for service-specific addressing (usernames, channels, etc.)
+## Start a new transport
 
-3. **Implement Core Methods**:
-   - `StubClient::fetch()` - Retrieve messages from service
-   - `StubClient::post()` - Send messages to service
-   - `Link::fetch()` - Periodic message retrieval
-   - `Link::send()` - Message transmission
-   - `PluginStub::getTransportProperties()` - specify the right MIME types for content-using actions (e.g. `"post", {jpeg/image}`)
+```bash
+cd /home/ubuntu/racegen
+plugins/transport-stub/new_transport.py --name Acme --out /home/ubuntu/racegen/acme-transport
+cd acme-transport && ./run_unit_tests.sh --image-tag <tag>   # green before you change anything
+```
 
-## Service Integration Examples
+`new_transport.py` renames everything consistently (plugin, library, composition id, client class, env vars, scenarios). Then follow `DEVELOPER_GUIDE.md`. Do not copy the directory by hand.
 
-### Twitter Integration
-- **Authentication**: OAuth 2.0 Bearer Token
-- **Fetch Messages**: GET /2/tweets/search/recent
-- **Post Messages**: POST /2/tweets
-- **Address Format**: @username or #hashtag
+## Layout
 
-### Discord Integration  
-- **Authentication**: Bot Token
-- **Fetch Messages**: GET /channels/{channel.id}/messages
-- **Post Messages**: POST /channels/{channel.id}/messages
-- **Address Format**: channel_id
+```
+CMakeLists.txt, CMakePresets.json        top level; -DBUILD_UNIT_TESTS=ON adds test/source
+build_artifacts.sh                       runs INSIDE the builder image (presets); --unit-tests also builds the tests
+build_artifacts_in_docker_image.sh       host entry point; takes --image-tag TAG (default $RACEBOAT_IMAGE_TAG, else main)
+run_unit_tests.sh                        builds tests in the builder image, runs them in the runtime image
+new_transport.py                         create a new transport from this template
+config/                                  user-model action schedules shipped in the kit (post-only / fetch-only / combined)
+source/manifest.json                     plugin + channel properties + composition
+source/CMakeLists.txt                    PLUGIN_NAME, kit layout, setup_component_target()
+source/common/                           log, JsonTypes (ActionJson), PersistentStorageHelpers
+source/transport/                        the component (see above)
+test/adapter.py                          scenario adapter: params, addresses, sidecar, action file per mode/role
+test/scenarios/*.json                    the four standard scenarios
+test/run_scenarios.py                    registers the plugin, installs scenarios, runs them, keeps logs
+test/mock_service.py                     mock of the illustrative REST API (a docker-compose sidecar)
+test/source/                             gtest: MockTransportSdk (real signatures), InMemoryServiceClient, tests
+```
 
-## Configuration
+## Parameters
 
-The plugin requests two user inputs during initialization:
-1. **Server URL** - Base API endpoint (e.g., "https://api.twitter.com")
-2. **Access Token** - Authentication token for the service
+| `--param` key | Meaning |
+|---|---|
+| `stubComposition.server` | base URL of the service |
+| `stubComposition.token` | access token (secret; pass as `${STUB_TOKEN}`) |
+| `stubComposition.actionFile` | user-model schedule, absolute path `/kits/PluginStub/config/<file>` |
 
-## Testing
+The prefix is the **composition id** from `source/manifest.json`, not the plugin name. With `STUB_SERVER` unset the adapter points at the mock sidecar; set `STUB_SERVER`/`STUB_TOKEN` to test a real service.
 
-Use the test framework in `test/` directory to validate your implementation.
+## Design decisions baked into the template
+
+- **LD_CREATOR_TO_LOADER**, two independent unidirectional containers for a bidirectional exchange: each node creates and posts into its own container and loads its peer's; names are deterministic.
+- Only the link that **created** a container deletes it; links rebuilt from an existing address reuse it.
+- Creators never fetch; loaders never post.
+- `doAction` only queues work; the link's worker thread talks to the service.
+- Fetch cursors are persisted via the SDK file API and advanced only after delivery.
+- Content is opaque bytes of MIME type `application/octet-stream`; encoding is a separate component (`noop` here).
+
+See `../../RACEBOAT_PLUGIN_DEVELOPMENT_GUIDE.md` for the API reference behind each of these.

@@ -36,7 +36,6 @@ CALL_NAME="$0"
 CURRENT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) >/dev/null 2>&1 && pwd)
 . ${CURRENT_DIR}/helper_functions.sh
 
-# TODO: should we update this script or just delete it?
 
 ###
 # Arguments
@@ -47,7 +46,7 @@ CURRENT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) >/dev/null 2>&1 && pwd)
 DOCKER_ARGS=""
 BUILD_ARGS=""
 
-FILEPATH="$(pwd)"
+FILEPATH="${CURRENT_DIR}"
 
 # Docker Image Values
 RACE_CONTAINER_REGISTRY="ghcr.io"
@@ -56,8 +55,10 @@ RACE_COMPILE_IMAGE_REPO="raceboat"
 RACE_COMPILE_IMAGE_NAME="raceboat-plugin-builder"
 LOCAL=false
 
-# Version values
-RACE_VERSION="main"
+# Image tag of ghcr.io/tst-race/raceboat/raceboat-plugin-builder. Override with the environment
+# variable RACEBOAT_IMAGE_TAG (e.g. the locally built "hf-testing" image) or --image-tag.
+# It must be the same tag the integration tests run with (run_scenario.py --image-tag).
+RACE_VERSION="${RACEBOAT_IMAGE_TAG:-main}"
 
 COMMAND="./build_artifacts.sh"
 
@@ -83,8 +84,11 @@ Arguments:
         Use a local image, instead of one from the container repository
     -g [value], --group [value], --group=[value]
         Specify a github group for the container registry. Defaults to '${RACE_GITHUB_GROUP}'.
+    -t [value], --image-tag [value], --image-tag=[value]
+        Tag of the raceboat-plugin-builder image to build with (same as --race-version).
+        Defaults to $RACEBOAT_IMAGE_TAG, else 'main'. Use the tag you test with.
     -v [value], --race-version [value], --race-version=[value]
-        Specify the RACE version. Defaults to '${RACE_VERSION}'.
+        Alias of --image-tag.
     -h, --help
         Print this message.
     --
@@ -93,7 +97,7 @@ Arguments:
 
 Examples: 
     ./build_artifacts_in_docker_image.sh -c bash
-    ./build_artifacts_in_docker_image.sh --race-version=2.6.0
+    ./build_artifacts_in_docker_image.sh --image-tag hf-testing
     ./build_artifacts_in_docker_image.sh -- --verbose -j 1
     ./build_artifacts_in_docker_image.sh -- -h
 
@@ -160,6 +164,20 @@ do
         shift
         ;;
 
+        -t|--image-tag)
+        if [ $# -lt 2 ]; then
+            formatlog "ERROR" "missing image tag" >&2
+            exit 1
+        fi
+        RACE_VERSION="$2"
+        shift
+        shift
+        ;;
+        --image-tag=*)
+        RACE_VERSION="${1#*=}"
+        shift
+        ;;
+
         -v|--race-version)
         if [ $# -lt 2 ]; then
             formatlog "ERROR" "missing RACE version number" >&2
@@ -202,11 +220,13 @@ done
 
 
 if [ "${LOCAL}" = true ]; then
-    # RACE_COMPILE_IMAGE="${RACE_COMPILE_IMAGE_NAME}:${RACE_VERSION}"
     RACE_COMPILE_IMAGE="raceboat-plugin-builder"
 else
     RACE_COMPILE_IMAGE="${RACE_CONTAINER_REGISTRY}/${RACE_GITHUB_GROUP}/${RACE_COMPILE_IMAGE_REPO}/${RACE_COMPILE_IMAGE_NAME}:${RACE_VERSION}"
-    docker pull "${RACE_COMPILE_IMAGE}"
+    # Never pull over a locally built image: a pull would silently replace it (or fail offline).
+    if ! docker image inspect "${RACE_COMPILE_IMAGE}" >/dev/null 2>&1; then
+        docker pull "${RACE_COMPILE_IMAGE}"
+    fi
 fi
 
 formatlog "INFO" "Using image ${RACE_COMPILE_IMAGE}"
@@ -217,6 +237,8 @@ docker run --rm \
     -v "${FILEPATH}":/code \
     -w /code \
     --name "stub-transport-builder" \
+    --user "$(id -u):$(id -g)" \
+    -e HOME=/tmp \
     ${DOCKER_ARGS} \
     "${RACE_COMPILE_IMAGE}" \
     "${COMMAND}" ${BUILD_ARGS} "$@"

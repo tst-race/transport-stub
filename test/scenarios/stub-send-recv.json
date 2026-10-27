@@ -1,0 +1,31 @@
+{
+  "id": "stub-send-recv",
+  "mode": "send-recv",
+  "wait_time": 60,
+  "timeout": 120,
+  "network": {
+    "name": "stub-send-recv-network",
+    "subnet": "10.30.2.0/24"
+  },
+  "nodes": [
+    {
+      "role": "listener",
+      "id": "stub-send-recv-listener",
+      "ip": "10.30.2.3",
+      "slots": {
+        "channel": "stubComposition"
+      }
+    },
+    {
+      "role": "connector",
+      "id": "stub-send-recv-connector",
+      "ip": "10.30.2.2",
+      "slots": {
+        "channel": "stubComposition"
+      }
+    }
+  ],
+  "send_message": "Hello from stub-send-recv",
+  "reply_message": "Reply from stub-send-recv",
+  "description": "Request/reply: the connector sends a request, the listener replies; each direction uses its own container."
+}

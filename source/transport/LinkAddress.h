@@ -1,35 +1,29 @@
-
-//
-// Copyright 2023 Two Six Technologies
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-
-#ifndef __COMMS_TWOSIX_TRANSPORT_LINK_PROFILE_H__
-#define __COMMS_TWOSIX_TRANSPORT_LINK_PROFILE_H__
+#ifndef __STUB_LINK_ADDRESS_H__
+#define __STUB_LINK_ADDRESS_H__
 
 #include <nlohmann/json.hpp>
 #include <string>
 
+// What one node publishes so a peer can find the data it posts. It is exchanged as a JSON string:
+//   - returned to the SDK in LinkProperties::linkAddress,
+//   - passed back in on the peer via loadLinkAddress() / createLinkFromAddress(),
+//   - supplied by the integration-test adapter as --send-address / --recv-address.
+// Keep it small, stable, and free of secrets. Service-specific fields go here.
 struct LinkAddress {
-    // Required
-    std::string hashtag;
-    int maxTries{120};
-    double timestamp{-1.0};
+    // REQUIRED. Id of the service-side container (repo, bucket, channel, hashtag...) the creator
+    // posts into and the loader fetches from.
+    std::string container;
+    // OPTIONAL. Message id to start fetching after ("" = from the beginning of the container).
+    std::string initialCursor;
 };
 
-// Enable automatic conversion to/from json
-void to_json(nlohmann::json &destJson, const LinkAddress &srcLinkAddress);
-void from_json(const nlohmann::json &srcJson, LinkAddress &destLinkAddress);
+void to_json(nlohmann::json &j, const LinkAddress &address);
+void from_json(const nlohmann::json &j, LinkAddress &address);
 
-#endif  // __COMMS_TWOSIX_TRANSPORT_LINK_PROFILE_H__
+// Parses a JSON link address. Returns false (and leaves `out` untouched) if it is malformed or
+// has no container. Unknown fields are ignored so adapters may add informational keys.
+bool parseLinkAddress(const std::string &text, LinkAddress &out);
+
+std::string linkAddressToString(const LinkAddress &address);
+
+#endif

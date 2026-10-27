@@ -47,6 +47,7 @@ PLUGIN_REVISION="r1"
 
 # Build Arguments
 CMAKE_ARGS="-j"
+CMAKE_CONFIG_ARGS=""
 VERBOSE=""
 
 HELP=\
@@ -62,6 +63,9 @@ Build Arguments:
         Specify the RACE version. Defaults to '${RACE_VERSION}'.
     --plugin-revision [value], --plugin-revision=[value]
         Specify the Plugin Revision Number. Defaults to '${PLUGIN_REVISION}'.
+    --unit-tests
+        Also BUILD the gtest unit tests (test/source). They cannot run inside the
+        builder image; run them with ./run_unit_tests.sh.
     --verbose
         Make everything very verbose.
 
@@ -120,6 +124,11 @@ do
         shift
         ;;
 
+        --unit-tests)
+        CMAKE_CONFIG_ARGS="-DBUILD_UNIT_TESTS=ON"
+        shift
+        ;;
+
         --verbose)
         VERBOSE="-DCMAKE_VERBOSE_MAKEFILE=ON"
         shift
@@ -153,9 +162,8 @@ if [ "$(uname -m)" == "x86_64" ]
 then
     formatlog "INFO" "Building x86_64 Linux Client/Server"
     cmake --preset=LINUX_x86_64 -Wno-dev \
-        -DBUILD_VERSION="${RACE_VERSION}-${PLUGIN_REVISION}"
-    # This will copy the output to plugin/artifacts/linux-x86_64-[client|server]
-    cmake -S . -B build -DBUILD_VERSION="${RACE_VERSION}-${PLUGIN_REVISION}"
+        -DBUILD_VERSION="${RACE_VERSION}-${PLUGIN_REVISION}" ${CMAKE_CONFIG_ARGS}
+    # Artifacts are copied to kit/artifacts/linux-<arch>-[client|server]/<PLUGIN_NAME>/
     cmake --build --preset=LINUX_x86_64 $CMAKE_ARGS
 
     # formatlog "INFO" "Building Android x86_64 Client"
@@ -173,10 +181,8 @@ else
     formatlog "INFO" "Building Linux aarch64 Client/Server"
     # export CMAKE_TEMPLATE_DIR="/opt/race/"
     cmake --preset=LINUX_arm64-v8a -Wno-dev \
-        -DBUILD_VERSION="${RACE_VERSION}-${PLUGIN_REVISION}"
-    # This will copy the output to plugin/artifacts/linux-arm64-v8a-[client|server]
-    cmake -S . -B build -DBUILD_VERSION="${RACE_VERSION}-${PLUGIN_REVISION}"
-
+        -DBUILD_VERSION="${RACE_VERSION}-${PLUGIN_REVISION}" ${CMAKE_CONFIG_ARGS}
+    # Artifacts are copied to kit/artifacts/linux-<arch>-[client|server]/<PLUGIN_NAME>/
     cmake --build --preset=LINUX_arm64-v8a $CMAKE_ARGS
 
     formatlog "android build not supported on aarch64 arch"

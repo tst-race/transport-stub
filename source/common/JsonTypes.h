@@ -25,17 +25,21 @@ enum ActionType {
     ACTION_UNDEF,
     ACTION_FETCH,
     ACTION_POST,
+    ACTION_CLEANUP,
 };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(ActionType, {
                                              {ACTION_UNDEF, nullptr},
                                              {ACTION_FETCH, "fetch"},
                                              {ACTION_POST, "post"},
+                                             {ACTION_CLEANUP, "cleanup"},
                                          });
 
+// Parsed form of Action::json. The user model emits {"linkId": "<id or *>", "type": "..."}.
+// A linkId of "*" means "every link".
 struct ActionJson {
     std::string linkId;
-    ActionType type;
+    ActionType type = ACTION_UNDEF;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ActionJson, linkId, type);

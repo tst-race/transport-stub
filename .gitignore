@@ -2,3 +2,5 @@
 =*
 build/
 kit/
+test/logs/
+__pycache__/
