@@ -56,7 +56,7 @@ RACE_COMPILE_IMAGE_NAME="raceboat-plugin-builder"
 LOCAL=false
 
 # Image tag of ghcr.io/tst-race/raceboat/raceboat-plugin-builder. Override with the environment
-# variable RACEBOAT_IMAGE_TAG (e.g. the locally built "hf-testing" image) or --image-tag.
+# variable RACEBOAT_IMAGE_TAG (e.g. a locally built "dev" image) or --image-tag.
 # It must be the same tag the integration tests run with (run_scenario.py --image-tag).
 RACE_VERSION="${RACEBOAT_IMAGE_TAG:-main}"
 
@@ -97,7 +97,7 @@ Arguments:
 
 Examples: 
     ./build_artifacts_in_docker_image.sh -c bash
-    ./build_artifacts_in_docker_image.sh --image-tag hf-testing
+    ./build_artifacts_in_docker_image.sh --image-tag dev
     ./build_artifacts_in_docker_image.sh -- --verbose -j 1
     ./build_artifacts_in_docker_image.sh -- -h
 

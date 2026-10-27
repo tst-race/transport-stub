@@ -3,7 +3,7 @@
 Runs this plugin's integration scenarios the standard way, stopping at the first failure.
 
     set -a; . /path/to/.env; set +a            # real-service credentials, if any
-    ./test/run_scenarios.py --image-tag hf-testing [--scenario stub-send-only] [--wait-time N]
+    ./test/run_scenarios.py --image-tag dev [--scenario stub-send-only] [--wait-time N]
 
 What it does (all of which are otherwise easy to forget):
   1. registers this plugin in raceboat/test/integration/plugin_registry.json (if missing);
